@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koya clinic</title>
+<style>
+  :root{
+    --bg:#f3f7f6; --surface:#ffffff; --ink:#16282a; --muted:#5b6f70; --line:#d5e0df;
+    --teal:#0e6b66; --teal-dark:#0a504c; --teal-soft:#e0f1ef;
+    --red:#b3261e; --red-soft:#fbe9e7; --amber:#8a5a00; --amber-soft:#fdf3dc;
+    --font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f1b1c; --surface:#172627; --ink:#e6f0ef; --muted:#9bb2b1; --line:#2c4243;
+      --teal:#4fc3bb; --teal-dark:#7fd6cf; --teal-soft:#183534;
+      --red:#ff8f85; --red-soft:#3b1f1d; --amber:#f0c36b; --amber-soft:#3a2e12;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font)}
+  header{background:var(--teal);color:#fff;padding:28px 20px}
+  @media (prefers-color-scheme:dark){header{background:#0b3a37}}
+  header div,main{max-width:960px;margin:0 auto}
+  h1{margin:0;font-size:1.7rem;font-weight:650;letter-spacing:-.01em}
+  header p{margin:4px 0 0;opacity:.9}
+  main{padding:20px;display:grid;gap:20px}
+  section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+  h2{margin:0 0 12px;font-size:1.15rem}
+  h3{margin:16px 0 6px;font-size:.95rem;color:var(--muted);font-weight:600}
+  label{display:block;font-size:.9rem;font-weight:600;margin:10px 0 4px}
+  input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:inherit}
+  input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--teal);outline-offset:1px}
+  .row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+  .bar>*{flex:1 1 160px}
+  .bar>button{flex:0 0 auto}
+  button{font:inherit;font-weight:600;padding:9px 16px;border-radius:7px;border:1px solid var(--teal);background:var(--teal);color:#fff;cursor:pointer}
+  @media (prefers-color-scheme:dark){button{color:#06201e}}
+  button:hover:not(:disabled){background:var(--teal-dark);border-color:var(--teal-dark)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--teal)}
+  button.ghost:hover:not(:disabled){background:var(--teal-soft);color:var(--teal-dark)}
+  button.danger{background:transparent;border-color:var(--red);color:var(--red)}
+  button.danger:hover:not(:disabled){background:var(--red-soft);color:var(--red);border-color:var(--red)}
+  .msg{margin-top:12px;padding:10px 12px;border-radius:7px;font-size:.95rem}
+  .msg:empty{display:none}
+  .msg.err{background:var(--red-soft);color:var(--red)}
+  .msg.warn{background:var(--amber-soft);color:var(--amber)}
+  .msg.ok{background:var(--teal-soft);color:var(--teal-dark)}
+  .day{margin:14px 0 6px;font-weight:650}
+  .slots{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .slot{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+  .slot:hover:not(:disabled){background:var(--teal-soft);border-color:var(--teal);color:var(--ink)}
+  .slot small{font-weight:400;color:var(--muted)}
+  .slot[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+  .slot[aria-pressed="true"] small{color:#fff;opacity:.9}
+  @media (prefers-color-scheme:dark){.slot[aria-pressed="true"],.slot[aria-pressed="true"] small{color:#06201e}}
+  .slot:disabled{text-decoration:line-through;text-decoration-color:var(--muted)}
+  .chosen{margin:0 0 4px;padding:10px 12px;background:var(--teal-soft);border-radius:7px}
+  .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:10px;display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .card.confirmation{border-color:var(--teal);background:var(--teal-soft)}
+  .card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:.92rem}
+  .card dt{color:var(--muted)} .card dd{margin:0;word-break:break-all}
+  .tag{display:inline-block;padding:1px 9px;border-radius:99px;font-size:.8rem;font-weight:600;background:var(--teal-soft);color:var(--teal-dark)}
+  .tag.cancelled{background:var(--red-soft);color:var(--red)}
+  .hint{color:var(--muted);font-size:.9rem;margin:0}
+  details summary{cursor:pointer;font-weight:650;font-size:1.15rem}
+  details[open] summary{margin-bottom:12px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div>
+  <h1>Koya Clinic</h1>
+  <p>Pick a free time, enter your details, and get a confirmation.</p>
+</div></header>
+
+<main>
+  <section aria-labelledby="h-key">
+    <h2 id="h-key">API key</h2>
+    <label for="apiKey">Key sent as the X-API-Key header</label>
+    <input id="apiKey" type="password" autocomplete="off" placeholder="Paste your API key">
+    <p class="hint" style="margin-top:6px">Kept in this browser tab only.</p>
+  </section>
+
+  <section aria-labelledby="h-slots">
+    <h2 id="h-slots">1. Choose a time</h2>
+    <div class="bar">
+      <div><label for="provider">Provider (optional)</label><input id="provider" placeholder="All providers"></div>
+      <button id="loadSlots" type="button">Show slots</button>
+      <label style="flex:0 0 auto;display:flex;gap:6px;align-items:center;margin:0 0 9px;font-weight:400">
+        <input id="onlyFree" type="checkbox" checked style="width:auto"> Free only
+      </label>
+    </div>
+    <div id="slotsMsg" class="msg" role="status"></div>
+    <div id="slots"></div>
+  </section>
+
+  <section aria-labelledby="h-book">
+    <h2 id="h-book">2. Your details</h2>
+    <p id="chosen" class="chosen" hidden></p>
+    <div class="row">
+      <div><label for="name">Full name</label><input id="name" autocomplete="name"></div>
+      <div><label for="email">Email</label><input id="email" type="email" autocomplete="email"></div>
+    </div>
+    <div style="margin-top:14px"><button id="bookBtn" type="button" disabled>Book this slot</button></div>
+    <div id="bookMsg" class="msg" role="status"></div>
+    <div id="confirmation"></div>
+  </section>
+
+  <section aria-labelledby="h-mine">
+    <h2 id="h-mine">3. Find or cancel a booking</h2>
+    <div class="bar">
+      <div><label for="lookupEmail">Your email</label><input id="lookupEmail" type="email" autocomplete="email"></div>
+      <button id="listBtn" type="button">Show my bookings</button>
+    </div>
+    <div class="bar">
+      <div><label for="lookupId">Or a booking ID</label><input id="lookupId" placeholder="Booking ID"></div>
+      <button id="getBtn" type="button" class="ghost">Look up</button>
+    </div>
+    <div id="mineMsg" class="msg" role="status"></div>
+    <div id="mine"></div>
+    <div style="margin-top:12px"><button id="moreBtn" type="button" class="ghost" hidden>Load more</button></div>
+  </section>
+
+  <section>
+    <details>
+      <summary>Set up your data</summary>
+      <p class="hint">Adds slots to the database. Existing bookings are kept.</p>
+      <div class="row">
+        <div><label for="sProvider">Provider</label><input id="sProvider" placeholder="Dr. Okafor"></div>
+        <div><label for="sStart">First slot starts</label><input id="sStart" type="datetime-local"></div>
+        <div><label for="sMins">Minutes per slot</label><input id="sMins" type="number" min="5" value="30"></div>
+        <div><label for="sCount">How many slots</label><input id="sCount" type="number" min="1" max="200" value="8"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button id="addSlots" type="button">Add slots</button>
+        <button id="wipe" type="button" class="danger">Delete everything</button>
+      </div>
+      <p class="hint" style="margin-top:8px">Delete everything removes all slots and all bookings. Don't use it while others are testing.</p>
+      <div id="setupMsg" class="msg" role="status"></div>
+    </details>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k){ try { return sessionStorage.getItem(k) || ""; } catch { return ""; } },
+  set(k,v){ try { sessionStorage.setItem(k,v); } catch {} }
+};
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+  : "k-" + Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+let selected = null;          // the slot object the patient picked
+let idem = { key: null, sig: null }; // one Idempotency-Key per distinct booking request
+let nextCursor = null, listedEmail = "";
+let busy = false;
+
+$("apiKey").value = store.get("apiKey");
+$("apiKey").addEventListener("input", (e) => store.set("apiKey", e.target.value.trim()));
+
+function show(id, text, kind){ const el = $(id); el.textContent = text || ""; el.className = "msg " + (kind || ""); }
+
+// One place that talks to the backend. Returns {ok, status, data, retryAfter}.
+async function api(method, path, body, headers = {}) {
+  const key = $("apiKey").value.trim();
+  if (!key) return { ok:false, status:0, data:{ error:"Paste your API key at the top first." } };
+  try {
+    const res = await fetch(path, {
+      method,
+      headers: { "X-API-Key": key, ...(body ? { "Content-Type":"application/json" } : {}), ...headers },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    let data = null;
+    try { data = await res.json(); } catch {}
+    return { ok:res.ok, status:res.status, data: data || {}, retryAfter: res.headers.get("Retry-After") };
+  } catch {
+    return { ok:false, status:0, data:{ error:"Can't reach the server. Check your connection and try again." } };
+  }
+}
+
+function errorText(r){
+  if (r.status === 401) return "The API key is wrong or missing. Check it at the top of the page.";
+  if (r.status === 429) return `Too many attempts for this email. Try again in ${r.retryAfter || "a few"} seconds.`;
+  return (r.data && r.data.error) || "Something went wrong. Try again.";
+}
+
+const fmtDay  = (d) => d.toLocaleDateString(undefined, { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+const fmtTime = (d) => d.toLocaleTimeString(undefined, { hour:"numeric", minute:"2-digit" });
+const fmtFull = (iso) => { const d = new Date(iso); return isNaN(d) ? iso : `${fmtDay(d)}, ${fmtTime(d)}`; };
+
+// ---------- 1. slots ----------
+let allSlots = [];
+async function loadSlots(){
+  show("slotsMsg", "Loading slots…");
+  const p = $("provider").value.trim();
+  const r = await api("GET", "/slots" + (p ? "?provider=" + encodeURIComponent(p) : ""));
+  if (!r.ok) { show("slotsMsg", errorText(r), "err"); return; }
+  allSlots = r.data.slots || [];
+  show("slotsMsg", "");
+  if (selected && !allSlots.some(s => s.id === selected.id && s.available)) pick(null);
+  renderSlots();
+}
+
+function renderSlots(){
+  const box = $("slots"); box.innerHTML = "";
+  const now = Date.now();
+  const list = allSlots.filter(s => !$("onlyFree").checked || (s.available && new Date(s.start) > now));
+  if (!list.length) {
+    show("slotsMsg", allSlots.length ? "No free slots right now." : "No slots yet. Add some under “Set up your data”.", "warn");
+    return;
+  }
+  show("slotsMsg", "");
+  let day = "", grid;
+  for (const s of list) {
+    const d = new Date(s.start), label = fmtDay(d);
+    if (label !== day) {
+      day = label;
+      const h = document.createElement("div"); h.className = "day"; h.textContent = label; box.appendChild(h);
+      grid = document.createElement("div"); grid.className = "slots"; box.appendChild(grid);
+    }
+    const past = d <= now, free = s.available && !past;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "slot"; b.disabled = !free;
+    b.setAttribute("aria-pressed", selected && selected.id === s.id ? "true" : "false");
+    const t = document.createElement("span"); t.textContent = fmtTime(d);
+    const small = document.createElement("small"); small.textContent = s.provider + (free ? "" : past ? " (past)" : " (booked)");
+    b.append(t, small);
+    b.addEventListener("click", () => pick(s));
+    grid.appendChild(b);
+  }
+}
+
+function pick(s){
+  selected = s;
+  const c = $("chosen");
+  c.hidden = !s;
+  if (s) c.textContent = `${s.provider}, ${fmtFull(s.start)}`;
+  $("bookBtn").disabled = !s;
+  show("bookMsg", "");
+  renderSlots();
+}
+
+// ---------- 2. book ----------
+async function book(){
+  if (busy || !selected) return;
+  const name = $("name").value.trim(), email = $("email").value.trim();
+  if (!name) return show("bookMsg", "Enter your full name.", "err");
+  if (!/^\S+@\S+\.\S+$/.test(email)) return show("bookMsg", "Enter a valid email address.", "err");
+
+  const body = { slot_id: selected.id, name, email };
+  // Same details => same key, so a retry after a dropped connection can't double-book.
+  const sig = JSON.stringify(body);
+  if (idem.sig !== sig) idem = { key: uuid(), sig };
+
+  busy = true; $("bookBtn").disabled = true; show("bookMsg", "Booking…");
+  const r = await api("POST", "/bookings", body, { "Idempotency-Key": idem.key });
+  busy = false; $("bookBtn").disabled = false;
+
+  if (r.status === 201 || (r.ok && r.data && r.data.id)) {
+    show("bookMsg", "You're booked. Keep your booking ID to cancel or look it up later.", "ok");
+    $("confirmation").innerHTML = "";
+    $("confirmation").appendChild(bookingCard(r.data, { confirmation:true }));
+    $("lookupEmail").value = email;
+    idem = { key:null, sig:null };
+    pick(null); loadSlots();
+  } else if (r.status === 409) {
+    show("bookMsg", "Someone else just booked that slot. Pick another time.", "warn");
+    idem = { key:null, sig:null }; pick(null); loadSlots();
+  } else if (r.status === 404) {
+    show("bookMsg", "That slot no longer exists. Pick another time.", "warn"); pick(null); loadSlots();
+  } else {
+    show("bookMsg", errorText(r), r.status === 429 ? "warn" : "err");
+  }
+}
+
+function bookingCard(b, opts = {}){
+  const card = document.createElement("div");
+  card.className = "card" + (opts.confirmation ? " confirmation" : "");
+  const dl = document.createElement("dl");
+  const slot = allSlots.find(s => s.id === b.slot_id);
+  const rows = [
+    ["Status", null],
+    ["Booking ID", b.id],
+    ["Slot", slot ? `${slot.provider}, ${fmtFull(slot.start)}` : b.slot_id],
+    ["Name", b.name], ["Email", b.email],
+    ["Booked at", fmtFull(b.created_at)],
+  ];
+  for (const [k, v] of rows) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd");
+    if (k === "Status") { const t = document.createElement("span"); t.className = "tag " + b.status; t.textContent = b.status; dd.appendChild(t); }
+    else dd.textContent = v;
+    dl.append(dt, dd);
+  }
+  card.appendChild(dl);
+  if (b.status === "confirmed") {
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "danger"; x.textContent = "Cancel booking";
+    x.addEventListener("click", () => cancel(b.id, card));
+    card.appendChild(x);
+  }
+  return card;
+}
+
+// ---------- 3. find / cancel ----------
+async function listBookings(more){
+  const email = more ? listedEmail : $("lookupEmail").value.trim();
+  if (!email) return show("mineMsg", "Enter the email you booked with.", "err");
+  if (!more) { $("mine").innerHTML = ""; listedEmail = email; nextCursor = null; }
+  show("mineMsg", "Loading…");
+  const qs = new URLSearchParams({ email, limit: "5" });
+  if (more && nextCursor) qs.set("cursor", nextCursor);
+  const r = await api("GET", "/bookings?" + qs);
+  if (!r.ok) return show("mineMsg", errorText(r), "err");
+  const items = r.data.bookings || [];
+  for (const b of items) $("mine").appendChild(bookingCard(b));
+  nextCursor = r.data.next_cursor || null;
+  $("moreBtn").hidden = !nextCursor;
+  show("mineMsg", $("mine").children.length ? "" : "No bookings found for that email.", $("mine").children.length ? "" : "warn");
+}
+
+async function getBooking(){
+  const id = $("lookupId").value.trim();
+  if (!id) return show("mineMsg", "Enter a booking ID.", "err");
+  const r = await api("GET", "/bookings/" + encodeURIComponent(id));
+  $("mine").innerHTML = ""; $("moreBtn").hidden = true;
+  if (r.status === 404) return show("mineMsg", "No booking with that ID.", "warn");
+  if (!r.ok) return show("mineMsg", errorText(r), "err");
+  show("mineMsg", ""); $("mine").appendChild(bookingCard(r.data));
+}
+
+async function cancel(id, card){
+  if (!confirm("Cancel this booking?")) return;
+  const r = await api("DELETE", "/bookings/" + encodeURIComponent(id));
+  if (r.status === 409) show("mineMsg", "That booking was already cancelled.", "warn");
+  else if (r.status === 404) show("mineMsg", "That booking no longer exists.", "warn");
+  else if (!r.ok) return show("mineMsg", errorText(r), "err");
+  else show("mineMsg", "Booking cancelled. The slot is free again.", "ok");
+  if (r.ok) { card.replaceWith(bookingCard(r.data)); loadSlots(); }
+}
+
+// ---------- setup ----------
+async function addSlots(){
+  const provider = $("sProvider").value.trim(), start = $("sStart").value;
+  const mins = Number($("sMins").value), count = Number($("sCount").value);
+  if (!provider || !start) return show("setupMsg", "Enter a provider and a start time.", "err");
+  if (!(mins >= 1) || !(count >= 1 && count <= 200)) return show("setupMsg", "Minutes must be 1 or more, and slots between 1 and 200.", "err");
+  const t0 = new Date(start).getTime();
+  const slots = Array.from({ length: count }, (_, i) => ({
+    provider,
+    start: new Date(t0 + i * mins * 60000).toISOString(),
+    end:   new Date(t0 + (i + 1) * mins * 60000).toISOString(),
+  }));
+  const r = await api("POST", "/slots", { slots });
+  if (!r.ok) return show("setupMsg", errorText(r), "err");
+  show("setupMsg", `Added ${slots.length} slots.`, "ok"); loadSlots();
+}
+
+async function wipe(){
+  if (!confirm("Delete ALL slots and ALL bookings? This can't be undone.")) return;
+  const r = await api("POST", "/reset", { slots: [] });
+  if (!r.ok) return show("setupMsg", errorText(r), "err");
+  show("setupMsg", "Everything deleted.", "ok");
+  $("confirmation").innerHTML = ""; $("mine").innerHTML = ""; pick(null); loadSlots();
+}
+
+$("loadSlots").addEventListener("click", loadSlots);
+$("onlyFree").addEventListener("change", renderSlots);
+$("bookBtn").addEventListener("click", book);
+$("listBtn").addEventListener("click", () => listBookings(false));
+$("moreBtn").addEventListener("click", () => listBookings(true));
+$("getBtn").addEventListener("click", getBooking);
+$("addSlots").addEventListener("click", addSlots);
+$("wipe").addEventListener("click", wipe);
+if ($("apiKey").value) loadSlots();
+</script>
+</body>
+</html>
