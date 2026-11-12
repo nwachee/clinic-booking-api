@@ -3,13 +3,15 @@
 Built to the Koya Cohort 4 contract. A booking API plus a small web page where patients see free slots, book one and get a confirmation.
 
 - All errors look like `{"error": "<message>"}`.
-- All API routes need the header `X-API-Key` (401 otherwise).
-- The web page is served from the same server at `/`.
+- All API routes need the header `X-API-Key` (401 otherwise) when called directly.
+- The web page is served from the same server at `/` and needs no key from the user (see [How the web page works](#how-the-web-page-works)).
 
 **Pick your path**
+
 - [Run it on your own computer (offline)](#a-run-it-locally-offline)
 - [Run it online on Render](#b-deploy-online-on-render)
 - [Test it](#c-test-it)
+- [How the web page works](#how-the-web-page-works)
 - [Something broke?](#troubleshooting)
 
 ---
@@ -17,11 +19,13 @@ Built to the Koya Cohort 4 contract. A booking API plus a small web page where p
 ## A. Run it locally (offline)
 
 ### What you need
+
 - Node.js 20 or newer (`node -v`)
 - PostgreSQL 14 or newer, **or** Docker
 - Windows users: use WSL (Ubuntu). Everything below works the same there.
 
 ### Step 1: get the code
+
 ```
 git clone <your-repo-url>
 cd clinic-booking-api
@@ -35,13 +39,16 @@ The app connects with its own role (`clinic_user`) to its own database (`koyacli
 > **Why a new role?** Postgres users ("roles") live inside Postgres and are separate from your computer login. After install only the `postgres` role exists, so commands like `createdb` fail with `role "yourname" does not exist`. We create one role for the app instead.
 
 **Option 1: Postgres installed on Linux or WSL**
+
 1. Make sure it is running: `sudo service postgresql start`
 2. Create the role and database (safe to rerun):
+
    ```
    sudo -u postgres psql -f scripts/setup-db.sql
    ```
 
 **Option 2: Postgres installed on macOS (Homebrew)**
+
 ```
 brew install postgresql@16
 brew services start postgresql@16
@@ -49,51 +56,63 @@ psql postgres -f scripts/setup-db.sql
 ```
 
 **Option 3: Postgres installed on native Windows**
+
 Open "SQL Shell (psql)" or a terminal, then run (enter the password you chose at install):
+
 ```
 psql -U postgres -f scripts/setup-db.sql
 ```
 
 **Option 4: Docker (no Postgres install needed)**
+
 ```
 docker run --name clinic-pg -e POSTGRES_USER=clinic_user -e POSTGRES_PASSWORD=clinic_pass -e POSTGRES_DB=koyaclinic -p 5432:5432 -d postgres:16
 ```
+
 - Start it again later with `docker start clinic-pg`.
 - If port 5432 is already used by an installed Postgres, use `-p 5433:5432` and put `5433` in `DATABASE_URL`.
 - On WSL, turn on Docker Desktop > Settings > Resources > WSL Integration for your distro.
 
 **Check the database works** (use the port you chose):
+
 ```
 psql "postgres://clinic_user:clinic_pass@localhost:5432/koyaclinic" -c "select 1"
 ```
+
 You should see a `1`. If you do, Postgres is ready.
 
 ### Step 3: configure the app
+
 ```
 cp .env.example .env
 ```
+
 On Windows PowerShell use `copy .env.example .env`. Then open `.env` and set:
 
-| Variable | Meaning | Local value |
-|---|---|---|
-| `API_KEY` | The secret every request must send | any long random string |
-| `DATABASE_URL` | How the app reaches Postgres | `postgres://clinic_user:clinic_pass@localhost:5432/koyaclinic` |
-| `PGSSL` | Use SSL to the database | `false` |
-| `PORT` | Port for the app | `3000` |
-| `SEED_DEMO_DATA` | Fill an empty database with sample slots | `false` |
+| Variable         | Meaning                                                      | Local value                                                    |
+| ---------------- | ------------------------------------------------------------ | -------------------------------------------------------------- |
+| `API_KEY`        | The secret every API request must send. The web page does not ask for it: the server adds it for the page. | any long random string |
+| `DATABASE_URL`   | How the app reaches Postgres                                 | `postgres://clinic_user:clinic_pass@localhost:5432/koyaclinic` |
+| `PGSSL`          | Use SSL to the database                                      | `false`                                                        |
+| `PORT`           | Port for the app                                             | `3000`                                                         |
+| `SEED_DEMO_DATA` | Fill an empty database with sample slots                     | `false`                                                        |
 
-The app reads `.env` automatically. No `export` needed.
+The app reads `.env` automatically. No `export` needed. The app will not start if `API_KEY` is missing.
 
 ### Step 4: start it
+
 ```
 npm run dev
 ```
-Wait for `API listening`, then open http://localhost:3000. Tables are created automatically on first start.
+
+Wait for `API listening`, then open [http://localhost:3000](http://localhost:3000). Tables are created automatically on first start.
 
 ### Step 5: add your own data
+
 The database starts empty. Add slots in either way:
-- **Web page:** paste your API key, open "Set up your data", enter a provider, a start time, minutes per slot and how many, then "Add slots".
-- **API:** `POST /slots` (see [Endpoints](#endpoints)).
+
+- **Web page:** open "Set up your data" at the bottom, enter a provider, a start time, minutes per slot and how many, then "Add slots". No key needed.
+- **API:** `POST /slots` with the `X-API-Key` header (see [Endpoints](#endpoints)).
 
 Set `SEED_DEMO_DATA=true` only if you want sample slots on an empty database.
 
@@ -104,29 +123,36 @@ Set `SEED_DEMO_DATA=true` only if you want sample slots on an empty database.
 You need a GitHub account and a Render account (render.com).
 
 1. **Push the code to GitHub** (`.env` is git-ignored, so your secrets stay local).
+
 2. **Create the database:** Render > New + > PostgreSQL. Name it `clinic-db`, choose the Free plan and the nearest region, then Create Database. When it says **Available**, open it and copy the **Internal Database URL**.
+
 3. **Create the web service:** New + > Web Service > pick your repo, then set:
+
    - Language: Node
    - Build command: `npm install && npm run build`
    - Start command: `npm start`
    - Health check path (Advanced): `/health`
+
 4. **Environment variables:**
 
-   | Variable | Value |
-   |---|---|
-   | `API_KEY` | a new long random string (not your local one) |
-   | `DATABASE_URL` | the **Internal** Database URL |
-   | `PGSSL` | `false` (use `true` only with the External URL) |
-   | `SEED_DEMO_DATA` | `false` |
+   | Variable         | Value                                           |
+   | ---------------- | ----------------------------------------------- |
+   | `API_KEY`        | a new long random string (not your local one)   |
+   | `DATABASE_URL`   | the **Internal** Database URL                   |
+   | `PGSSL`          | `false` (use `true` only with the External URL) |
+   | `SEED_DEMO_DATA` | `false`                                         |
 
 5. **Create Web Service** and watch the Logs until you see `API listening` and the status is **Live**.
+
 6. **Verify:** open `https://<your-app>.onrender.com/health` (expect `{"status":"ok"}`), then open `https://<your-app>.onrender.com/`.
-7. Share the base URL and the API key with whoever needs them.
+
+7. Share the base URL and the API key with whoever needs them (they only need the key for direct API calls, not for the web page).
 
 **Shortcut:** `render.yaml` in this repo can create the database and the service together (New + > Blueprint).
 
 **Good to know**
-- The free web service sleeps when idle. The first request after a pause can take about a minute, so open it before a demo.
+
+- The free web service sleeps when idle. The first request after a pause can take about a minute, so open `/health` before a demo or a test.
 - The data lives in Postgres, so restarts and redeploys do not lose bookings.
 - Vercel is not recommended here: this is a long-running NestJS server and Vercel would need it converted to serverless functions plus a hosted database.
 
@@ -136,20 +162,39 @@ You need a GitHub account and a Render account (render.com).
 
 Works the same against `http://localhost:3000` and your Render URL.
 
-1. **Web page:** open the URL, paste the API key, add slots, book one, look it up, cancel it.
-2. **`requests.http`:** install the VS Code extension **REST Client** (`humao.rest-client`). Set `@baseUrl` at the top to your local or Render URL and make sure `API_KEY` is in `.env` (or replace `@apiKey` with the key). Run the sections in order.
+1. **Web page:** open the URL, add slots under "Set up your data", pick a slot, book it, look the booking up by email or ID, then cancel it (a confirmation dialog appears first).
+2. **`requests.http`:** install the VS Code extension **REST Client** (`humao.rest-client`). Set `@baseUrl` at the top to your local or Render URL and make sure `API_KEY` is in `.env` (or replace `@apiKey` with the key). Run the sections in order. These call the API directly, so they send the key.
 3. **Race test (Level 3):** 10 simultaneous bookings for one slot, expect one `201` and nine `409`:
+
    ```
    API_KEY=your-key BASE_URL=http://localhost:3000 npm run race
    ```
+
    PowerShell: `$env:API_KEY="your-key"; npm run race`
+
 4. **Team test:** follow `TEAM_TEST_CHECKLIST.md`.
 
 Everyone using the same server shares one database. Use your own email when booking, and avoid "Delete everything" or `POST /reset` while others are testing.
 
 ---
 
+## How the web page works
+
+The page (`public/index.html`) never holds or asks for the API key.
+
+- It calls `/api/...` on its own server, for example `/api/slots`.
+- A small middleware in `src/main.ts` removes the `/api` prefix and sets `X-API-Key` from the server's `API_KEY` environment variable, then passes the request to the normal routes.
+- Calls made directly to `/slots`, `/bookings` and so on still need the `X-API-Key` header. Only `/api/*` gets the key added.
+- The page sends an `Idempotency-Key` with each booking, so a retry after a dropped connection cannot double-book. It shows friendly messages for 409 (slot taken), 404, 429 (with the wait time) and network errors.
+- Cancelling uses a confirmation dialog.
+- "Free only" hides booked and past slots. Turn it off to see them struck through.
+
+**Security note:** because the server adds the key for `/api/*`, anyone who can open the page can use everything the page can, including "Set up your data" and "Delete everything" (`POST /reset`). That is fine for a demo and testing. Before sharing the URL publicly, remove that section from the page and block `/api/reset` in the proxy.
+
+---
+
 ## Using your own data
+
 - **Web page:** "Set up your data".
 - **`POST /slots`:** adds slots and keeps existing bookings.
 - **`POST /reset`:** replaces ALL slots and deletes ALL bookings. Use it to start clean, not during a live demo.
@@ -157,34 +202,53 @@ Everyone using the same server shares one database. Use your own email when book
 ---
 
 ## Endpoints
-| Method | Path | Request | Success | Level |
-|---|---|---|---|---|
-| POST | /reset | `{"slots":[{"id","provider","start","end"}]}` | 200 | 1 |
-| POST | /slots (extra, not in contract) | `{"slots":[{"provider","start","end"}]}`, `id` optional | 201, adds slots, keeps bookings | setup |
-| GET | /slots (`?provider=`) | none | 200 `{"slots":[{id,provider,start,end,available}]}` earliest start first | 1 |
-| POST | /bookings | `{"slot_id","name","email"}` + optional `Idempotency-Key` header | 201 booking | 1-5 |
-| GET | /bookings?email=&limit=&cursor= | none | 200 `{"bookings":[...],"next_cursor":string\|null}` oldest first | 4 |
-| GET | /bookings/:id | none | 200 booking, 404 | 1 |
-| DELETE | /bookings/:id | none | 200 booking with `status:"cancelled"`, 404, 409 if already cancelled | 3 |
-| GET | /health | none (no key) | 200 `{"status":"ok"}` | - |
+
+Direct calls need `X-API-Key`. The web page reaches the same routes through `/api/...`.
+
+| Method | Path                            | Request                                                          | Success                                                                  | Level |
+| ------ | ------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ | ----- |
+| POST   | /reset                          | `{"slots":[{"id","provider","start","end"}]}`                    | 200                                                                      | 1     |
+| POST   | /slots (extra, not in contract) | `{"slots":[{"provider","start","end"}]}`, `id` optional          | 201, adds slots, keeps bookings                                          | setup |
+| GET    | /slots (`?provider=`)           | none                                                             | 200 `{"slots":[{id,provider,start,end,available}]}` earliest start first | 1     |
+| POST   | /bookings                       | `{"slot_id","name","email"}` + optional `Idempotency-Key` header | 201 booking                                                              | 1-5   |
+| GET    | /bookings?email=&limit=&cursor= | none                                                             | 200 `{"bookings":[...],"next_cursor":string or null}` oldest first       | 4     |
+| GET    | /bookings/:id                   | none                                                             | 200 booking, 404                                                         | 1     |
+| DELETE | /bookings/:id                   | none                                                             | 200 booking with `status:"cancelled"`, 404, 409 if already cancelled     | 3     |
+| GET    | /health                         | none (no key)                                                    | 200 `{"status":"ok"}`                                                    | -     |
 
 Booking = `{id, slot_id, name, email, status, created_at}`.
 
 POST /bookings status codes:
+
 - 400: missing, empty or invalid field, or the slot has already started
 - 404: slot not found
 - 409: slot already booked
 - 422: `Idempotency-Key` reused with a different body
 - 429 + `Retry-After` (seconds): the 6th attempt for one email within a minute. Failed attempts count.
 
+GET /bookings: `limit` is 1 to 50 (default 10), `cursor` comes from the previous `next_cursor`.
+
 Not shown in the contract, so assumed: the body returned by `/reset` (it returns the slots) and the text of the 401 message.
 
 ---
 
+## How each level is met
+
+| Level | How |
+| ----- | --- |
+| 1 | Routes in `slots/` and `bookings/` |
+| 2 | `ApiKeyGuard` (constant-time key check) and zod validation (trimmed, lower-cased email, no empty fields) |
+| 3 | A partial unique index allows one `confirmed` booking per slot, so simultaneous requests get one 201 and the rest 409. Cancelling frees the slot |
+| 4 | `Idempotency-Key` stored in Postgres with a hash of the body (same key and body replays the first response, different body gives 422). Cursor paging on an insertion sequence number |
+| 5 | Attempts stored in Postgres per email, guarded by an advisory lock, 5 per minute, then 429 with `Retry-After` |
+
+---
+
 ## Project structure (NestJS)
+
 ```
 src/
-  main.ts                  bootstrap: loads .env, JSON body limit, static web page, listen
+  main.ts                  bootstrap: loads .env, JSON body limit, /api key proxy, static web page, listen
   app.module.ts            root module, registers the global error filter
   db/                      DbModule + DbService: the single pg Pool, creates tables on startup
   common/
@@ -195,25 +259,29 @@ src/
   bookings/                controller + service: create, list, get, cancel (Levels 1-5)
   health/                  GET /health
 public/index.html          the web page
+public/script.js           script
 scripts/setup-db.sql       one-time local role and database setup
 scripts/race-test.mjs      concurrency test
 requests.http              REST Client requests
 ```
+
 Controllers only handle HTTP; services hold the logic and talk to Postgres.
 
 ---
 
 ## Troubleshooting
 
-| Error | Meaning | Fix |
-|---|---|---|
-| `ECONNREFUSED 127.0.0.1:5432` | Postgres is not running, or is on another port | Start it (`sudo service postgresql start`, `brew services start postgresql@16`, or `docker start clinic-pg`). Check the port in `DATABASE_URL`. |
-| `role "yourname" does not exist` | You ran `createdb` as your own login | Do not use `createdb`. Run `scripts/setup-db.sql` as in Step 2. |
+| Error                                         | Meaning                                                                                           | Fix                                                                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ECONNREFUSED 127.0.0.1:5432`                 | Postgres is not running, or is on another port                                                    | Start it (`sudo service postgresql start`, `brew services start postgresql@16`, or `docker start clinic-pg`). Check the port in `DATABASE_URL`.    |
+| `role "yourname" does not exist`              | You ran `createdb` as your own login                                                              | Do not use `createdb`. Run `scripts/setup-db.sql` as in Step 2.                                                                                    |
 | `password authentication failed for user ...` | Wrong user or password in `DATABASE_URL`, or you are reaching a different Postgres than you think | Rerun `scripts/setup-db.sql` (it resets the password) and copy the URL from `.env.example`. Check what owns the port: `sudo ss -ltnp \| grep 5432`. |
-| `database "koyaclinic" already exists` | Harmless. It was created earlier, maybe by another role | Rerun `scripts/setup-db.sql`; it hands the database to `clinic_user`. |
-| `EADDRINUSE :::3000` | An old copy of the app is still running | `lsof -i :3000` then `kill <PID>`, or set another `PORT` in `.env`. |
-| `API_KEY env var is required` | `.env` is missing or has no `API_KEY` | Create `.env` from `.env.example` in the project root. |
-| SSL or `no pg_hba.conf entry` on Render | Wrong URL type for the `PGSSL` setting | Internal URL with `PGSSL=false`, or External URL with `PGSSL=true`. |
-| 401 on every request | Missing or wrong `X-API-Key` | Send the same value as `API_KEY` on that server (local and Render keys differ). |
-| 429 when testing | More than 5 booking attempts for one email in a minute | Wait for the `Retry-After` seconds, or use another email. |
-| Render page takes a minute to load | Free instance was asleep | Wait, then refresh. Open it before a demo. |
+| `database "koyaclinic" already exists`        | Harmless. It was created earlier, maybe by another role                                           | Rerun `scripts/setup-db.sql`; it hands the database to `clinic_user`.                                                                              |
+| `EADDRINUSE :::3000`                          | An old copy of the app is still running                                                           | `lsof -i :3000` then `kill <PID>`, or set another `PORT` in `.env`.                                                                                |
+| `API_KEY env var is required`                 | `.env` is missing or has no `API_KEY`                                                             | Create `.env` from `.env.example` in the project root. On Render, add `API_KEY` under Environment.                                                 |
+| SSL or `no pg_hba.conf entry` on Render       | Wrong URL type for the `PGSSL` setting                                                            | Internal URL with `PGSSL=false`, or External URL with `PGSSL=true`.                                                                                |
+| 401 on a direct API call                      | Missing or wrong `X-API-Key`                                                                      | Send the same value as `API_KEY` on that server (local and Render keys differ).                                                                    |
+| Page shows "The service is misconfigured"     | The page got a 401, so the server's key is not being attached                                     | Check that the `/api` proxy in `src/main.ts` runs before the routes and that `API_KEY` is set. Page calls must start with `/api/`.                 |
+| Page shows "No slots yet"                         | The database is empty                                                                             | Add slots under "Set up your data", or set `SEED_DEMO_DATA=true` on an empty database.                                                             |
+| 429 when testing                              | More than 5 booking attempts for one email in a minute                                            | Wait for the `Retry-After` seconds, or use another email.                                                                                          |
+| Render page takes a minute to load            | Free instance was asleep                                                                          | Wait, then refresh. Open `/health` before a demo.                                                                                                  |
